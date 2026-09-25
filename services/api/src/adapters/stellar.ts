@@ -63,6 +63,16 @@ function exactTextMemo(
   return memo.type === "text" && memo.value === expected;
 }
 
+function operationRecords(document: Record<string, unknown>): unknown[] {
+  const embedded = document._embedded;
+  if (embedded !== undefined && embedded !== null && typeof embedded === "object" && !Array.isArray(embedded)) {
+    const records = (embedded as Record<string, unknown>).records;
+    if (Array.isArray(records)) return records;
+  }
+  if (Array.isArray(document.records)) return document.records;
+  throw new EvidenceVerificationError("Horizon operations response did not contain a records collection.");
+}
+
 async function fetchJson(
   fetchImplementation: typeof fetch,
   url: URL,
@@ -163,12 +173,9 @@ export class HorizonStellarPaymentAdapter implements StellarPaymentAdapter {
       ),
       "Stellar Horizon operations",
     );
-    if (!Array.isArray(operationsDocument.records)) {
-      throw new EvidenceVerificationError("Horizon operations response did not contain a records collection.");
-    }
-
+    const records = operationRecords(operationsDocument);
     const matches: Array<{ index: number; operation: Record<string, unknown> }> = [];
-    for (const [index, candidate] of operationsDocument.records.entries()) {
+    for (const [index, candidate] of records.entries()) {
       const operation = asRecord(candidate, "Horizon returned an invalid operation document.");
       if (operation.type !== "payment") continue;
 

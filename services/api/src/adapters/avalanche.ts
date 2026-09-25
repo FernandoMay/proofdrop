@@ -149,7 +149,7 @@ export class FujiAvalancheAnchorAdapter implements AvalancheAnchorAdapter {
     const transport = http(this.#config.avalanche.rpcUrl, { timeout: 15_000 });
     const publicClient = createPublicClient({ chain: avalancheFuji, transport });
     const walletClient = createWalletClient({ account, chain: avalancheFuji, transport });
-    const manifestHash = input.manifestHash as Hex;
+    const viemManifestHash = `0x${input.manifestHash}` as Hex;
 
     let transactionHash: Hex;
     let receipt: Awaited<ReturnType<typeof publicClient.waitForTransactionReceipt>>;
@@ -159,7 +159,7 @@ export class FujiAvalancheAnchorAdapter implements AvalancheAnchorAdapter {
         address: registryAddress,
         abi: ANCHOR_REGISTRY_ABI,
         functionName: "anchor",
-        args: [manifestHash, input.stellarTransactionHash],
+        args: [viemManifestHash, input.stellarTransactionHash],
         chain: avalancheFuji,
         account,
       });
@@ -199,7 +199,7 @@ export class FujiAvalancheAnchorAdapter implements AvalancheAnchorAdapter {
     const event = events[0]!;
     if (
       event.address.toLowerCase() !== registryAddress.toLowerCase() ||
-      event.args.manifestHash.toLowerCase() !== manifestHash.toLowerCase() ||
+      event.args.manifestHash.toLowerCase() !== viemManifestHash.toLowerCase() ||
       event.args.stellarTxHash !== input.stellarTransactionHash ||
       event.args.anchorer.toLowerCase() !== account.address.toLowerCase() ||
       event.args.anchoredAt !== block.timestamp
@@ -213,7 +213,7 @@ export class FujiAvalancheAnchorAdapter implements AvalancheAnchorAdapter {
         address: registryAddress,
         abi: ANCHOR_REGISTRY_ABI,
         functionName: "getAnchor",
-        args: [manifestHash],
+        args: [viemManifestHash],
       })) as readonly [string, string, bigint];
     } catch {
       throw new ExternalServiceError("The Avalanche registry getter could not be read.");

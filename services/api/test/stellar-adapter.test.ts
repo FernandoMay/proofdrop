@@ -37,35 +37,53 @@ const config: AppConfig = {
   pollar: { adapterEnabled: false },
 };
 
+type OperationsResponseShape = "embedded" | "top-level";
+
 function horizonFetch(
   amount: string,
   memo: string | undefined = request.memo,
   memoType: string | undefined = "text",
+  operationsResponseShape: OperationsResponseShape = "embedded",
 ): { fetch: typeof fetch; urls: string[] } {
   const urls: string[] = [];
   const implementation = (async (input: RequestInfo | URL) => {
     const url = new URL(input);
     urls.push(url.toString());
     if (url.pathname.endsWith("/operations")) {
-      return new Response(
-        JSON.stringify({
-          records: [
-            {
-              type: "payment",
-              transaction_hash: syntheticTransactionHash,
-              transaction_successful: true,
-              asset_type: "credit_alphanum4",
-              asset_code: "USDC",
-              asset_issuer: issuer,
-              from: issuer,
-              to: issuer,
-              amount,
-              ...(memo ? { memos: [{ type: "text", value: memo }] } : {}),
-            },
-          ],
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
+      const operations = [
+        {
+          _links: {
+            self: { href: "https://horizon-testnet.stellar.org/operations/1" },
+            transaction: { href: url.toString().replace(/\/operations$/, "") },
+          },
+          id: "1",
+          paging_token: "1",
+          transaction_successful: true,
+          source_account: issuer,
+          type: "payment",
+          type_i: 1,
+          created_at: "2026-01-02T03:04:05.000Z",
+          transaction_hash: syntheticTransactionHash,
+          asset_type: "credit_alphanum4",
+          asset_code: "USDC",
+          asset_issuer: issuer,
+          from: issuer,
+          to: issuer,
+          amount,
+          ...(memo ? { memos: [{ type: "text", value: memo }] } : {}),
+        },
+      ];
+      const operationsDocument =
+        operationsResponseShape === "embedded"
+          ? {
+              _links: { self: { href: url.toString() } },
+              _embedded: { records: operations },
+            }
+          : { records: operations };
+      return new Response(JSON.stringify(operationsDocument), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     return new Response(
@@ -83,8 +101,8 @@ function horizonFetch(
 }
 
 describe("HorizonStellarPaymentAdapter", () => {
-  it("reads the transaction and real operations collection, accepting an exact seven-place amount", async () => {
-    const horizon = horizonFetch("1.25");
+  it("reads the transaction and real HAL operations collection, accepting an exact seven-place amount", async () => {
+    const horizon = horizonFetch("1.2500000");
     const adapter = new HorizonStellarPaymentAdapter(config, horizon.fetch);
     const result = await adapter.verifyPayment({
       transactionHash: syntheticTransactionHash,
@@ -102,6 +120,21 @@ describe("HorizonStellarPaymentAdapter", () => {
       `https://horizon-testnet.stellar.org/transactions/${syntheticTransactionHash}`,
       `https://horizon-testnet.stellar.org/transactions/${syntheticTransactionHash}/operations`,
     ]);
+  });
+
+  it("retains support for top-level records fixtures", async () => {
+    const adapter = new HorizonStellarPaymentAdapter(
+      config,
+      horizonFetch("1.2500000", request.memo, "text", "top-level").fetch,
+    );
+    const result = await adapter.verifyPayment({
+      transactionHash: syntheticTransactionHash,
+      request,
+      asset,
+      now: "2026-01-02T03:05:00.000Z",
+    });
+
+    expect(result.status).toBe("verified");
   });
 
   it("rejects an operation record that belongs to another transaction", async () => {

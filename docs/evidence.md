@@ -68,6 +68,69 @@ about whether the payer intended the payment or whether a real payment exists.
 No hackathon-specific Pollar API contract is known. The implementation does not call, infer, or
 simulate Pollar. `DisabledPollarAdapter` is the only boundary and reports `unconfigured`.
 
+## Reproducible live testnet evidence (2026-09-25)
+
+This run used the local ProofDrop API in `DEMO_MODE=false` with the dedicated testnet wallets. The
+repository is still process-local; the values below are the captured evidence from the run.
+
+### Stellar settlement
+
+| Field | Value |
+|-------|-------|
+| Network | Stellar Testnet |
+| ProofDrop ID | `PD-8277BC0E` |
+| Payment TX | `6c30a12bece551b1a74481eced1b44299e0dc1b4eaca5a19be4850b8e59dd191` |
+| Ledger | `4857031` |
+| Memo type | `text` |
+| Memo | `PD-8277BC0E` |
+| Amount | `1.2500000 USDC` |
+| Sender | `GBZZKESMPSJYV66AM432APVCKUZSTZ34XFDOD7IMIB62QKK6UAU5SPSF` |
+| Recipient | `GBUYX6AY5TLDD5O6ZZJBRUP36VTUNU2JRH7YXYYYOB74NLWTWRJVUFFO` |
+| USDC issuer | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+| Explorer | https://stellar.expert/explorer/testnet/tx/6c30a12bece551b1a74481eced1b44299e0dc1b4eaca5a19be4850b8e59dd191 |
+
+Horizon returned one successful classic `payment` operation with exact asset, issuer, amount,
+recipient, and text memo. The API independently read both the transaction document and the
+`/transactions/{hash}/operations` collection.
+
+### Canonical proof
+
+| Field | Value |
+|-------|-------|
+| Proof ID | `PD-B32D2CCB` |
+| Schema | `proofdrop.manifest.v1` |
+| SHA-256 manifest hash | `c53b42bbccb4c1067b88b0838fdfa1e621a9cdf3ef6509b25d6e0215c3548919` |
+| Public proof path | `/proof/PD-B32D2CCB` |
+
+The public manifest hash is intentionally stored without an Ethereum `0x` prefix. The Avalanche
+adapter prefixes it only at the viem `bytes32` boundary.
+
+### Avalanche Fuji anchor
+
+| Field | Value |
+|-------|-------|
+| Network | Avalanche Fuji C-Chain |
+| Chain ID | `43113` |
+| Registry | `0xf935193b98c53c25df88246f2a2fa78931a07d12` |
+| Deployment TX | `0x1d8d1b1c4820bd5d2fddb09e20044c721a1a441ac45e3d2f26ccabe977671803` |
+| Deployment block | `58693412` |
+| Anchor TX | `0xbc3612b0e87711d045f1886a384507969c416c984e340ee2a09ffc916e14dab3` |
+| Anchor block | `58694683` |
+| Event manifest hash | `0xc53b42bbccb4c1067b88b0838fdfa1e621a9cdf3ef6509b25d6e0215c3548919` |
+| Event Stellar TX | `6c30a12bece551b1a74481eced1b44299e0dc1b4eaca5a19be4850b8e59dd191` |
+| Explorer | https://explorer-test.avax.network/c-chain/tx/0xbc3612b0e87711d045f1886a384507969c416c984e340ee2a09ffc916e14dab3 |
+
+A read-only verification against Fuji confirmed chain ID `43113`, a successful receipt to the
+configured registry, exactly one `ManifestAnchored` event, matching event arguments, and matching
+`getAnchor(manifestHash)` storage. Source verification of the deployed contract has not been
+performed yet.
+
+### Diagnostic history
+
+An earlier diagnostic payment (`8e37bf4a42475970a914861457b6c1c611456a42971bcc851abcbe9f2fb41fa6`,
+memo `PD-A9D3DCD5`) exposed Horizon's real HAL shape (`_embedded.records`). It is not the final
+ProofDrop record. The parser was corrected and the final evidence above was produced afterward.
+
 ## Still required for production evidence
 
 1. Deploy `AnchorRegistry` on Avalanche Fuji and verify the deployment source and address.
