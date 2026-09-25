@@ -5,7 +5,8 @@ payment request, verifies one exact classic Stellar payment, hashes a canonical 
 SHA-256, optionally anchors that hash on **Avalanche Fuji C-Chain**, and exposes a public proof URL.
 
 The repository runs in an explicit **simulated demo mode** with no secrets. Real adapters stay
-unconfigured until their environment variables are supplied.
+unconfigured until their environment variables are supplied. Pollar is an optional browser payment
+rail; when it is absent, the existing manual hash flow remains available.
 
 ## Quick demo
 
@@ -132,6 +133,7 @@ In the Netlify site's **Environment variables** settings, set exactly these valu
 | Variable | Value | Scope |
 |----------|-------|-------|
 | `NEXT_PUBLIC_API_URL` | `https://proofdrop.onrender.com` | Public browser/server-rendered reads |
+| `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` | `pub_testnet_...` or omit | Optional public Pollar browser configuration |
 | `API_URL` | `https://proofdrop.onrender.com` | Server-only Next.js proxy target |
 | `API_MUTATION_SECRET` | The same server-only value entered in Render | Server-only; never expose it as `NEXT_PUBLIC_*` |
 
@@ -188,6 +190,8 @@ request is idempotent.
 
 - A canonical **public hash is not a zero-knowledge proof** and does not by itself prove payment.
 - Stellar payment verification and Avalanche anchoring are separate, sequential transactions.
+- Pollar is only an optional Stellar payment rail. A hash returned by Pollar is a verification
+  candidate, while Horizon remains the payment authority and Avalanche remains the proof anchor.
 - Horizon success is insufficient: the API reads `/transactions/{hash}` and the separate
   `/transactions/{hash}/operations` collection, then matches one exact classic USDC `Payment`
   operation, amount, asset issuer/code,
@@ -205,11 +209,32 @@ request is idempotent.
 - No claim is made about Mainnet, atomic settlement, a benchmark, an audit, Merkle verification,
   or ZK cryptography.
 
-## Pollar
+## Optional Pollar client
 
-The Pollar boundary is intentionally disabled. No hackathon-specific endpoint, credential, or
-verification contract is known, so ProofDrop does not invent one or claim Pollar verification. See
-`services/api/src/adapters/pollar.ts`.
+Pollar is an optional browser payment rail, not a ProofDrop verifier. The web app pins
+`@pollar/react@0.11.3` and `@pollar/core@0.11.3`, mounts `PollarProvider` only for a valid
+Testnet publishable key, and can offer Google login plus the SDK's built-in Freighter login. Pollar
+may build, sign, and submit the exact Stellar payment, including the request ID as a text memo.
+
+### Enable Pollar
+
+1. Sign in at [dashboard.pollar.xyz](https://dashboard.pollar.xyz).
+2. Open **Build → API Keys → Generate**.
+3. Select a **Publishable** key for **Testnet** and copy the `pub_testnet_...` value.
+4. Set `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` in the web runtime (for example, Netlify) and rebuild.
+5. Allow the local or deployed web origin in the Pollar dashboard when prompted.
+
+The `pub_` key is designed for browser use and is replaced into the client bundle at build time. A
+`sec_` key is server-only; this integration does not need one. Never add a Pollar secret key to
+Render, GitHub, `.env.example`, or any `NEXT_PUBLIC_*` variable. Render continues to host only the
+ProofDrop API, and its health response keeps Pollar `unconfigured` because no server adapter is used.
+Leaving the publishable key unset or blank keeps the existing manual hash flow fully available.
+
+A Pollar `success` or `pending` outcome contributes only its returned Stellar hash. The existing
+PayActions verification action sends that hash to the ProofDrop backend, which independently checks
+the exact Horizon payment, classic USDC asset and issuer, amount, recipient, and `memo_type=text`
+request ID. Pollar does not verify Avalanche or the canonical proof, and the cross-chain flow is not
+atomic. See `services/api/src/adapters/pollar.ts` for the non-authoritative server boundary.
 
 ## More documentation
 

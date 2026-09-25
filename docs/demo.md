@@ -40,7 +40,10 @@ The digest is deterministic for the generated manifest. It is not evidence of a 
 | Repository | In-memory, cleared when the API restarts |
 | Stellar | Deterministic `SIMULATED-STELLAR-*` label; no Horizon request |
 | Avalanche | Deterministic simulation result; no wallet, RPC transaction, receipt, or event |
-| Pollar | Disabled and unconfigured |
+| Pollar | Optional browser client; no provider or Pollar call when no publishable key is configured |
+
+With the default empty `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY`, real-mode payment pages retain the
+manual external-wallet hash fallback and never mount `PollarProvider`.
 
 Demo anchor evidence deliberately has null contract address, transaction hash, block, log, and
 anchorer. The UI does not render a Stellar or Avalanche evidence card unless that evidence was

@@ -8,6 +8,7 @@ the other, and the public hash alone does not prove that a payment exists.
 
 ```text
 Browser
+  |-- optional Pollar SDK -----> Stellar Testnet payment submission
   |
   | same-origin JSON /api/proxy/* for mutations
   v
@@ -19,16 +20,18 @@ Fastify API ---- ProofDropService ---- Repository
   |                    |
   |                    +----------- Canonical manifest + SHA-256
   |
-  +-- Horizon adapter ------> Stellar Testnet
-  +-- viem adapter -----------> Avalanche Fuji
-  +-- disabled Pollar boundary
+  +-- Horizon adapter ------> Stellar Testnet verification
+  +-- viem adapter -----------> Avalanche Fuji anchoring
+  +-- disabled, non-authoritative Pollar server boundary
 ```
 
 The Next.js server reads the API for dynamic pages and forwards only the three intended evidence
 mutations through `/api/proxy/*`. It reads `API_MUTATION_SECRET` server-side in real mode; the
 browser never receives that value. Small client components submit same-origin commands and refresh
 server-rendered evidence. The Fastify API remains the source of truth and checks the mutation
-header independently.
+header independently. When `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` contains a valid `pub_testnet_`
+key, a client-only boundary mounts Pollar on Stellar Testnet. The no-key path omits that provider
+and preserves the manual hash flow.
 
 ## Workspace boundaries
 
@@ -36,7 +39,7 @@ header independently.
 |-----------|----------------|--------------|
 | `packages/shared` | Domain contracts, state-independent validation, canonical JSON, manifest hash | Network calls or persistence |
 | `services/api` | HTTP validation, orchestration, adapters, repository use, secret handling | UI copy or wallet custody |
-| `apps/web` | Spanish product UX, server-rendered evidence, explicit simulation labels | Private keys, Horizon logic, fabricated hashes |
+| `apps/web` | Spanish product UX, server-rendered evidence, optional Pollar browser client, explicit simulation labels | Private keys, Horizon logic, fabricated hashes |
 | `contracts/avalanche` | Idempotent manifest-hash registry for Fuji | Stellar verification or atomicity |
 | `infra/postgres` | SQL schema for a future repository adapter | Demo startup requirements |
 
@@ -147,6 +150,19 @@ MVP does not load a database driver or require PostgreSQL.
 
 ## Pollar boundary
 
-The adapter interface is present but permanently disabled. The hackathon-specific API, endpoint,
-authentication, and response contract are unknown. Stellar evidence remains independently checked
-by Horizon; no path claims Pollar verification.
+Pollar is a browser client and optional Stellar payment rail. With a valid
+`NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` (`pub_testnet_...`), `PollarProvider` is mounted only after
+client mount. The payment component uses `runTx("payment", ...)` with the request's destination,
+amount, exact classic USDC asset, and text request ID as the memo. It offers Google and the SDK's
+built-in Freighter login, displays the authenticated address, and opens Pollar history.
+
+Only a hash returned with a `success` or `pending` outcome enters the existing PayActions hash
+field. A `pending` hash is not accepted until the user invokes the existing Horizon verification
+action; an SDK error is displayed without adopting any hash or claiming success. The API remains the
+independent payment verifier, and no Pollar response advances the payment or proof state directly.
+
+The server adapter stays disabled and reports `client_optional`; it makes no Pollar network call
+and is non-authoritative. API health continues to report the server-side Pollar boundary as
+`unconfigured`, independently of whether the browser has a publishable key. Pollar does not verify
+Avalanche, the canonical hash, or cross-network atomicity. Without a key, the provider and Pollar
+payment controls are absent and manual hash verification remains available.

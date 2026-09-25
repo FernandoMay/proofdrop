@@ -6,6 +6,7 @@
 |----------|--------------|--------------------|
 | Stellar transaction hash | Identifies a transaction document at Horizon | Successful execution or the requested asset/amount by itself |
 | Horizon payment evidence | Successful ledger transaction containing the exact classic USDC Payment operation | Avalanche anchoring or atomicity |
+| Pollar SDK outcome/hash | Pollar returned an outcome and transaction hash for its optional payment flow | ProofDrop payment acceptance, Avalanche anchoring, or atomicity |
 | Canonical manifest | Exact ProofDrop request and accepted payment fields in a deterministic serialization | That the stored fields are truthful without checking payment evidence |
 | SHA-256 public hash | Integrity/recomputation check for those manifest bytes | Payment existence, privacy, zero knowledge, or consensus finality |
 | Avalanche registry event | Fuji receipt included an anchor for the hash and Stellar transaction label | That Horizon verification happened atomically with the event |
@@ -65,8 +66,20 @@ about whether the payer intended the payment or whether a real payment exists.
 
 ## Pollar
 
-No hackathon-specific Pollar API contract is known. The implementation does not call, infer, or
-simulate Pollar. `DisabledPollarAdapter` is the only boundary and reports `unconfigured`.
+Pollar is an optional browser payment rail. Its SDK may build, sign, and submit a Stellar payment,
+but only a returned `success` or `pending` hash becomes a ProofDrop verification candidate. The
+backend still reads that hash from the configured Horizon endpoint and independently requires the
+exact classic USDC asset and issuer, amount, recipient, and `memo_type=text` request ID.
+
+A Pollar `error` is displayed as an SDK error and never advances ProofDrop state, even if the SDK
+response contains a hash. A `pending` hash remains unaccepted until the existing verification action
+checks Horizon. Pollar transaction history is wallet UX, not proof evidence.
+
+Pollar does not verify Avalanche, anchor the canonical manifest, or make Stellar settlement and
+Avalanche anchoring atomic. `DisabledPollarAdapter` remains a non-authoritative server boundary: it
+calls no Pollar endpoint and reports `client_optional`. When
+`NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` is absent, the Pollar provider is not mounted and the existing
+manual hash flow remains available.
 
 ## Reproducible live testnet evidence (2026-09-25)
 
