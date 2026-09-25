@@ -51,4 +51,42 @@ describe("API network configuration", () => {
       }),
     ).toThrow(/AVALANCHE_NETWORK/);
   });
+
+  describe("API listener configuration", () => {
+    it("prefers API_PORT and API_HOST over Render PORT and HOST", () => {
+      const config = loadConfig({
+        API_PORT: "4321",
+        PORT: "10000",
+        API_HOST: "127.0.0.2",
+        HOST: "0.0.0.0",
+      });
+
+      expect(config.api.host).toBe("127.0.0.2");
+      expect(config.api.port).toBe(4321);
+    });
+
+    it("falls back to Render PORT and HOST when API variables are absent", () => {
+      const config = loadConfig({ PORT: "10000", HOST: "0.0.0.0" });
+
+      expect(config.api.host).toBe("0.0.0.0");
+      expect(config.api.port).toBe(10000);
+    });
+
+    it("keeps the localhost defaults when listener variables are absent", () => {
+      const config = loadConfig({});
+
+      expect(config.api.host).toBe("127.0.0.1");
+      expect(config.api.port).toBe(4000);
+    });
+
+    it("parses valid ports from the selected source", () => {
+      expect(loadConfig({ API_PORT: " 1 " }).api.port).toBe(1);
+      expect(loadConfig({ PORT: " 65535 " }).api.port).toBe(65535);
+    });
+
+    it("rejects invalid ports", () => {
+      expect(() => loadConfig({ API_PORT: "0" })).toThrow(/API_PORT must be a valid TCP port/);
+      expect(() => loadConfig({ PORT: "65536" })).toThrow(/PORT must be a valid TCP port/);
+    });
+  });
 });

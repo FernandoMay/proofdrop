@@ -82,11 +82,12 @@ export function sanitizeEndpointOrigin(value: string): string | null {
   }
 }
 
-function parsePort(value: string | undefined): number {
-  if (!value) return 4000;
-  const port = Number(value);
+function parsePort(value: string | undefined, name: string): number {
+  const candidate = value?.trim();
+  if (!candidate) return 4000;
+  const port = Number(candidate);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error("API_PORT must be a valid TCP port.");
+    throw new Error(`${name} must be a valid TCP port.`);
   }
   return port;
 }
@@ -138,11 +139,15 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     throw new Error("AVALANCHE_PRIVATE_KEY must be a 32-byte 0x-prefixed hex value.");
   }
 
+  const apiPortValue = environment.API_PORT?.trim();
+  const portValue = apiPortValue || environment.PORT?.trim();
+  const portName = apiPortValue ? "API_PORT" : portValue ? "PORT" : "API_PORT";
+
   return {
     mode,
     api: {
-      host: environment.API_HOST?.trim() || "127.0.0.1",
-      port: parsePort(environment.API_PORT),
+      host: environment.API_HOST?.trim() || environment.HOST?.trim() || "127.0.0.1",
+      port: parsePort(portValue, portName),
       webOrigin: environment.WEB_ORIGIN?.trim() || "http://localhost:3000",
       mutationSecret: parseOptional(environment.API_MUTATION_SECRET),
     },

@@ -97,6 +97,55 @@ A real Stellar record can be created when the recipient is configured. Its manif
 without Avalanche configuration, but the anchor endpoint returns `unconfigured` until both Fuji
 values are present.
 
+The API listener uses `API_PORT` and `API_HOST` first, then Render's standard `PORT` and `HOST`,
+and finally the local defaults `127.0.0.1:4000`. This keeps local development unchanged while
+allowing a Render deployment to bind to all interfaces on port `10000`.
+
+## Render Blueprint deployment
+
+The root [`render.yaml`](render.yaml) defines one Node web service named `proofdrop-api` from
+`https://github.com/FernandoMay/proofdrop`, on `main`, with the free plan, one instance, the
+`/health` check, and automatic deployment on commits. Its build installs every workspace, builds
+`@proofdrop/shared`, and then builds the API. The configured Stellar and Avalanche values are
+Testnet/Fuji values; the private key and mutation secret are deliberately prompted for and are not
+stored in the Blueprint.
+
+### Deploy the API
+
+1. In the Render dashboard, choose **New → Blueprint**.
+2. Connect `https://github.com/FernandoMay/proofdrop` and select the `main` branch. Render reads
+   `render.yaml` from the repository root.
+3. Review the `proofdrop-api` service. When prompted, enter `API_MUTATION_SECRET` and the dedicated
+   `AVALANCHE_PRIVATE_KEY`; do not paste either value into the repository or YAML.
+4. Apply the Blueprint and wait for the build and health check to complete.
+5. Verify the deployment at <https://proofdrop-api.onrender.com/health>. The expected service URL is
+   <https://proofdrop-api.onrender.com>. A cold start on a free service can take a moment.
+
+Later pushes to `main` trigger automatic deploys through the Blueprint's commit auto-deploy setting.
+
+### Configure Netlify
+
+In the Netlify site's **Environment variables** settings, set exactly these values:
+
+| Variable | Value | Scope |
+|----------|-------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://proofdrop-api.onrender.com` | Public browser/server-rendered reads |
+| `API_URL` | `https://proofdrop-api.onrender.com` | Server-only Next.js proxy target |
+| `API_MUTATION_SECRET` | The same server-only value entered in Render | Server-only; never expose it as `NEXT_PUBLIC_*` |
+
+Save the variables and trigger a new Netlify deploy. The browser continues to use the same-origin
+Next.js proxy; it must not receive `API_MUTATION_SECRET` or the Avalanche private key. The exact
+`WEB_ORIGIN=https://proof-drop.netlify.app` allowlist in `render.yaml` remains enabled—there is no
+CORS wildcard.
+
+### Deployment limits
+
+Render currently runs ProofDrop against a process-local, in-memory repository. A restart, redeploy,
+or process replacement loses its records, so a public proof URL is not durable. A free Render web
+service may sleep after inactivity; on either a free or paid plan, a service can be unavailable
+during a restart or cold start. Changing to a paid plan does not make this in-memory repository
+durable. Use this path for a controlled hackathon demo, not production persistence.
+
 ## API routes
 
 All errors use this shape:

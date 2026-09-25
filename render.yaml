@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: proofdrop-api
+    repo: https://github.com/FernandoMay/proofdrop
+    branch: main
+    runtime: node
+    plan: free
+    numInstances: 1
+    buildCommand: npm ci && npm run build:shared && npm run build --workspace @proofdrop/api
+    startCommand: npm run start --workspace @proofdrop/api
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: API_HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "10000"
+      - key: WEB_ORIGIN
+        value: "https://proof-drop.netlify.app"
+      - key: DEMO_MODE
+        value: "false"
+      - key: STELLAR_NETWORK
+        value: "testnet"
+      - key: STELLAR_HORIZON_URL
+        value: "https://horizon-testnet.stellar.org"
+      - key: STELLAR_USDC_CODE
+        value: "USDC"
+      - key: STELLAR_USDC_ISSUER
+        value: "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+      - key: STELLAR_RECIPIENT_PUBLIC_KEY
+        value: "GBUYX6AY5TLDD5O6ZZJBRUP36VTUNU2JRH7YXYYYOB74NLWTWRJVUFFO"
+      - key: AVALANCHE_NETWORK
+        value: "fuji"
+      - key: AVALANCHE_RPC_URL
+        value: "https://api.avax-test.network/ext/bc/C/rpc"
+      - key: AVALANCHE_REGISTRY_ADDRESS
+        value: "0xf935193b98c53c25df88246f2a2fa78931a07d12"
+      - key: LOG_LEVEL
+        value: "info"
+      - key: API_MUTATION_SECRET
+        sync: false
+      - key: AVALANCHE_PRIVATE_KEY
+        sync: false
