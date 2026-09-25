@@ -16,3 +16,6 @@ Thumbs.db
 contracts/avalanche/out/
 contracts/avalanche/cache/
 contracts/avalanche/broadcast/
+
+# Local Netlify folder
+.netlify
