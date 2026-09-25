@@ -1,0 +1,33 @@
+{
+  "name": "proofdrop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ProofDrop MVP for independently verifiable Stellar Testnet payments with optional Avalanche Fuji anchors",
+  "license": "MIT",
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build --workspace @proofdrop/shared",
+    "dev:api": "npm run dev --workspace @proofdrop/api",
+    "dev:web": "npm run dev --workspace @proofdrop/web",
+    "dev:demo:api": "cross-env DEMO_MODE=true npm run dev --workspace @proofdrop/api",
+    "dev:demo:web": "npm run dev --workspace @proofdrop/web",
+    "dev:demo": "npm run build:shared && concurrently --kill-others-on-fail -n API,WEB \"npm run dev:demo:api\" \"npm run dev:demo:web\"",
+    "typecheck": "npm run build:shared && npm run typecheck --workspace @proofdrop/api && npm run typecheck --workspace @proofdrop/web",
+    "test": "npm run build:shared && npm run test --workspace @proofdrop/shared && npm run test --workspace @proofdrop/api",
+    "build": "npm run build:shared && npm run build --workspace @proofdrop/api && npm run build --workspace @proofdrop/web"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5",
+    "cross-env": "10.1.0",
+    "typescript": "5.9.3"
+  }
+}
