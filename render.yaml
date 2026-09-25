@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: proofdrop-api
+    name: proofdrop
     repo: https://github.com/FernandoMay/proofdrop
     branch: main
     runtime: node

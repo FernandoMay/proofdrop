@@ -97,13 +97,15 @@ A real Stellar record can be created when the recipient is configured. Its manif
 without Avalanche configuration, but the anchor endpoint returns `unconfigured` until both Fuji
 values are present.
 
-The API listener uses `API_PORT` and `API_HOST` first, then Render's standard `PORT` and `HOST`,
-and finally the local defaults `127.0.0.1:4000`. This keeps local development unchanged while
-allowing a Render deployment to bind to all interfaces on port `10000`.
+The API listener uses `API_PORT` and `API_HOST` first, then Render's standard `PORT` and `HOST`.
+When Render supplies `PORT` (or an explicit `RENDER` indicator is enabled) and neither host
+override is set, the host defaults to `0.0.0.0`; otherwise local development stays on
+`127.0.0.1:4000`. The Render service must bind to `0.0.0.0`: a loopback-only listener is not
+reachable through Render.
 
 ## Render Blueprint deployment
 
-The root [`render.yaml`](render.yaml) defines one Node web service named `proofdrop-api` from
+The root [`render.yaml`](render.yaml) defines one Node web service named `proofdrop` from
 `https://github.com/FernandoMay/proofdrop`, on `main`, with the free plan, one instance, the
 `/health` check, and automatic deployment on commits. Its build installs every workspace, builds
 `@proofdrop/shared`, and then builds the API. The configured Stellar and Avalanche values are
@@ -115,11 +117,11 @@ stored in the Blueprint.
 1. In the Render dashboard, choose **New → Blueprint**.
 2. Connect `https://github.com/FernandoMay/proofdrop` and select the `main` branch. Render reads
    `render.yaml` from the repository root.
-3. Review the `proofdrop-api` service. When prompted, enter `API_MUTATION_SECRET` and the dedicated
+3. Review the `proofdrop` service. When prompted, enter `API_MUTATION_SECRET` and the dedicated
    `AVALANCHE_PRIVATE_KEY`; do not paste either value into the repository or YAML.
 4. Apply the Blueprint and wait for the build and health check to complete.
-5. Verify the deployment at <https://proofdrop-api.onrender.com/health>. The expected service URL is
-   <https://proofdrop-api.onrender.com>. A cold start on a free service can take a moment.
+5. Verify the deployment at <https://proofdrop.onrender.com/health>. The expected service URL is
+   <https://proofdrop.onrender.com>. A cold start on a free service can take a moment.
 
 Later pushes to `main` trigger automatic deploys through the Blueprint's commit auto-deploy setting.
 
@@ -129,8 +131,8 @@ In the Netlify site's **Environment variables** settings, set exactly these valu
 
 | Variable | Value | Scope |
 |----------|-------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://proofdrop-api.onrender.com` | Public browser/server-rendered reads |
-| `API_URL` | `https://proofdrop-api.onrender.com` | Server-only Next.js proxy target |
+| `NEXT_PUBLIC_API_URL` | `https://proofdrop.onrender.com` | Public browser/server-rendered reads |
+| `API_URL` | `https://proofdrop.onrender.com` | Server-only Next.js proxy target |
 | `API_MUTATION_SECRET` | The same server-only value entered in Render | Server-only; never expose it as `NEXT_PUBLIC_*` |
 
 Save the variables and trigger a new Netlify deploy. The browser continues to use the same-origin

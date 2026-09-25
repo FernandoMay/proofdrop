@@ -140,13 +140,18 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   }
 
   const apiPortValue = environment.API_PORT?.trim();
-  const portValue = apiPortValue || environment.PORT?.trim();
+  const renderPortValue = environment.PORT?.trim();
+  const portValue = apiPortValue || renderPortValue;
   const portName = apiPortValue ? "API_PORT" : portValue ? "PORT" : "API_PORT";
+  const renderIndicator = environment.RENDER?.trim().toLowerCase();
+  const isRenderEnvironment = Boolean(renderPortValue) || renderIndicator === "true" || renderIndicator === "1";
+  const hostOverride = environment.API_HOST?.trim() || environment.HOST?.trim();
+  const host = hostOverride || (isRenderEnvironment ? "0.0.0.0" : "127.0.0.1");
 
   return {
     mode,
     api: {
-      host: environment.API_HOST?.trim() || environment.HOST?.trim() || "127.0.0.1",
+      host,
       port: parsePort(portValue, portName),
       webOrigin: environment.WEB_ORIGIN?.trim() || "http://localhost:3000",
       mutationSecret: parseOptional(environment.API_MUTATION_SECRET),

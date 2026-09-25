@@ -59,17 +59,32 @@ describe("API network configuration", () => {
         PORT: "10000",
         API_HOST: "127.0.0.2",
         HOST: "0.0.0.0",
+        RENDER: "true",
       });
 
       expect(config.api.host).toBe("127.0.0.2");
       expect(config.api.port).toBe(4321);
     });
 
-    it("falls back to Render PORT and HOST when API variables are absent", () => {
-      const config = loadConfig({ PORT: "10000", HOST: "0.0.0.0" });
+    it("uses HOST when API_HOST is absent", () => {
+      const config = loadConfig({ PORT: "10000", HOST: "127.0.0.2" });
+
+      expect(config.api.host).toBe("127.0.0.2");
+      expect(config.api.port).toBe(10000);
+    });
+
+    it("defaults to the wildcard host when Render PORT is present without HOST", () => {
+      const config = loadConfig({ PORT: "10000" });
 
       expect(config.api.host).toBe("0.0.0.0");
       expect(config.api.port).toBe(10000);
+    });
+
+    it("defaults to the wildcard host when an explicit RENDER indicator is present", () => {
+      const config = loadConfig({ RENDER: "true" });
+
+      expect(config.api.host).toBe("0.0.0.0");
+      expect(config.api.port).toBe(4000);
     });
 
     it("keeps the localhost defaults when listener variables are absent", () => {
