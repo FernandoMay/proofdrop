@@ -1,31 +1,30 @@
-export interface PollarVerificationRequest {
-  transactionHash: string;
-  network: string;
-}
-
-export interface PollarVerificationResult {
-  status: "unconfigured";
-  verified: false;
+export interface PollarBoundaryStatus {
+  status: "client_optional";
+  authoritative: false;
   message: string;
 }
 
 export interface PollarAdapter {
   readonly enabled: false;
-  verify(request: PollarVerificationRequest): Promise<PollarVerificationResult>;
+  readonly authoritative: false;
+  status(): PollarBoundaryStatus;
 }
 
 /**
- * Pollar's hackathon-specific API contract is unknown. This boundary stays disabled
- * until an official endpoint and authentication contract are supplied and reviewed.
+ * Pollar's official SDK is an optional browser payment rail. This server boundary
+ * stays disabled and non-authoritative: the API does not call Pollar or accept its
+ * responses as proof. Horizon remains the payment verifier.
  */
 export class DisabledPollarAdapter implements PollarAdapter {
   readonly enabled = false as const;
+  readonly authoritative = false as const;
 
-  async verify(_request: PollarVerificationRequest): Promise<PollarVerificationResult> {
+  status(): PollarBoundaryStatus {
     return {
-      status: "unconfigured",
-      verified: false,
-      message: "Pollar adapter disabled: the hackathon-specific API contract is unknown.",
+      status: "client_optional",
+      authoritative: false,
+      message:
+        "Pollar is an optional browser payment rail; this API does not call it or treat its responses as proof.",
     };
   }
 }

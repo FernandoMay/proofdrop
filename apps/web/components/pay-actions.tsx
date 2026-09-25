@@ -14,6 +14,7 @@ import {
 } from "@proofdrop/shared";
 
 import { Icon } from "./icons";
+import { PollarPayment } from "./pollar-payment";
 import { mutationFetch } from "@/lib/api";
 
 function hasVerifiedPayment(drop: ProofDropView): boolean {
@@ -59,6 +60,7 @@ export function PayActions({ drop }: { drop: ProofDropView }) {
   const router = useRouter();
   const [transactionHash, setTransactionHash] = useState("");
   const [working, setWorking] = useState(false);
+  const [pollarWorking, setPollarWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -207,12 +209,22 @@ export function PayActions({ drop }: { drop: ProofDropView }) {
         </>
       ) : drop.mode === "real" && drop.state === "pending" ? (
         <>
-          <div className="action-heading"><Icon name="wallet" size={21} /><div><h2>Registrar pago de Stellar</h2><p>Realiza el pago desde tu wallet y pega el hash de la transacción.</p></div></div>
+          <div className="action-heading"><Icon name="wallet" size={21} /><div><h2>Pagar en Stellar</h2><p>Usa Pollar si está configurado o continúa con una wallet externa.</p></div></div>
+          <PollarPayment
+            disabled={working}
+            drop={drop}
+            onTransactionHash={setTransactionHash}
+            onWorkingChange={setPollarWorking}
+          />
+          <div className="manual-payment-heading">
+            <h3>Wallet externa o hash manual</h3>
+            <p>Pega el hash de la transacción que enviaste fuera de Pollar.</p>
+          </div>
           <label className="field">
             <span>Hash de transacción Stellar</span>
-            <input className="mono-input" maxLength={64} onChange={(event) => setTransactionHash(event.target.value)} placeholder="64 caracteres hexadecimales" value={transactionHash} />
+            <input autoComplete="off" className="mono-input" maxLength={64} onChange={(event) => setTransactionHash(event.target.value)} placeholder="64 caracteres hexadecimales" spellCheck={false} value={transactionHash} />
           </label>
-          <button className="button button-primary button-full" disabled={working || transactionHash.length !== 64} onClick={() => void verifyPayment()} type="button">
+          <button className="button button-primary button-full" disabled={working || pollarWorking || transactionHash.length !== 64} onClick={() => void verifyPayment()} type="button">
             {working ? "Consultando Horizon…" : "Verificar pago exacto"}
           </button>
           <p className="form-footnote"><Icon name="shield" size={15} /> La billetera permanece fuera de ProofDrop. El backend solo verifica la evidencia.</p>
