@@ -7,9 +7,15 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="container header-inner">
         <Link aria-label="ProofDrop, inicio" className="brand" href="/">
-          <span className="brand-mark">
-            <Icon name="shield" size={21} />
-          </span>
+          {/* The wordmark beside it already names the product, so the logo image is decorative. */}
+          <img
+            alt=""
+            className="brand-logo"
+            decoding="async"
+            height={192}
+            src="/brand/logo-192.png"
+            width={192}
+          />
           <span>ProofDrop</span>
         </Link>
         <nav aria-label="Navegación principal" className="main-nav">

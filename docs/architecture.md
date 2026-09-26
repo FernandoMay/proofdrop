@@ -33,6 +33,38 @@ header independently. When `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` contains a valid
 key, a client-only boundary mounts Pollar on Stellar Testnet. The no-key path omits that provider
 and preserves the manual hash flow.
 
+## Production topology
+
+```text
+Browser
+  |
+  v
+proof-drop.netlify.app ............ Next.js app (apps/web)
+  |                                 same-origin /api/proxy/* for mutations
+  |  server-side reads + server-only mutation secret
+  v
+proofdrop.onrender.com ............ Fastify API (services/api), one free instance
+  |
+  +-- process-local in-memory repository ... records are lost on restart
+  +-- Horizon Testnet ...................... payment authority
+  +-- Avalanche Fuji C-Chain via viem ....... optional anchor, requires chain ID 43113
+  +-- Pollar server boundary .............. disabled, non-authoritative, no network call
+```
+
+Render runs a single free instance with no persistent volume, so the in-memory repository is a
+deployment constraint rather than a design preference. It does not change any trust rule below:
+Horizon remains the payment authority and the canonical SHA-256 remains the only integrity check.
+`infra/postgres/schema.sql` is the intended replacement.
+
+| Concern | Owner |
+|---------|-------|
+| Supplied brand artwork | `assets/` — not served at runtime |
+| Web-served brand assets | `apps/web/public/brand/` |
+| Favicon, Open Graph, web manifest | `apps/web/app/layout.tsx` and `apps/web/public/site.webmanifest` |
+| Payment verification | Horizon adapter in `services/api` |
+| Canonical JSON and SHA-256 | `packages/shared` |
+| Hash anchoring | Solidity registry plus the viem adapter |
+
 ## Workspace boundaries
 
 | Workspace | Responsibility | Must not own |
@@ -42,6 +74,8 @@ and preserves the manual hash flow.
 | `apps/web` | Spanish product UX, server-rendered evidence, optional Pollar browser client, explicit simulation labels | Private keys, Horizon logic, fabricated hashes |
 | `contracts/avalanche` | Idempotent manifest-hash registry for Fuji | Stellar verification or atomicity |
 | `infra/postgres` | SQL schema for a future repository adapter | Demo startup requirements |
+| `assets` | Supplied source brand artwork | Runtime imports or build inputs |
+| `apps/web/public/brand` | Web-optimized brand assets served to the browser | Evidence or contract logic |
 
 ## State machine
 

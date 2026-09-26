@@ -81,10 +81,14 @@ calls no Pollar endpoint and reports `client_optional`. When
 `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` is absent, the Pollar provider is not mounted and the existing
 manual hash flow remains available.
 
-## Reproducible live testnet evidence (2026-09-25)
+## Captured live testnet run (2026-09-25)
 
-This run used the local ProofDrop API in `DEMO_MODE=false` with the dedicated testnet wallets. The
-repository is still process-local; the values below are the captured evidence from the run.
+**These are historical, locally captured values, not the current state of the deployed service.**
+The run used the local ProofDrop API in `DEMO_MODE=false` with the dedicated testnet wallets. The
+repository was process-local, so the identifiers and the public proof URL below belong to that one
+run and do not describe the live deployment. Every value in this section was captured at the time of
+the run and has not been re-verified since; the Stellar transaction and the Avalanche anchor are
+permanent on their networks and remain independently checkable from the explorer links.
 
 ### Stellar settlement
 
@@ -144,15 +148,47 @@ An earlier diagnostic payment (`8e37bf4a42475970a914861457b6c1c611456a42971bcc85
 memo `PD-A9D3DCD5`) exposed Horizon's real HAL shape (`_embedded.records`). It is not the final
 ProofDrop record. The parser was corrected and the final evidence above was produced afterward.
 
+## Current deployment status
+
+| Area | Status |
+|------|--------|
+| Web homepage | Live at <https://proof-drop.netlify.app> |
+| API health | Live at <https://proofdrop.onrender.com/health>; reports mode and adapter readiness without secrets |
+| Pollar Google redirect | Configured for the deployed web origin |
+| Browser mutation proxy | Fixed; `POST` mutations through `/api/proxy/*` reach the API with the server-side secret |
+| Public record URLs | May return `404` after a Render restart, because records live in memory |
+
+The deployed API uses the same adapters, the same canonical manifest, and the same trust rules as
+the captured run above. It is configured for Stellar Testnet and Avalanche Fuji, but each run
+produces its own identifiers and its own manifest hash, so the values in the previous section do not
+transfer to it.
+
 ## Still required for production evidence
 
-1. Deploy `AnchorRegistry` on Avalanche Fuji and verify the deployment source and address.
-2. Use a dedicated Stellar Testnet recipient and sender with USDC trustlines.
-3. Submit a real classic USDC Payment with the exact request memo.
-4. Preserve Horizon's transaction response or selected fields in durable PostgreSQL storage.
-5. Run the viem adapter and retain its independently checked receipt/event/getter evidence.
-6. Operate the public API with durable identity, access control, rate limits, observability, and
+Completed work is listed first so it is not re-read as pending.
+
+### Completed
+
+| Item | Where it is visible |
+|------|---------------------|
+| `AnchorRegistry` deployed on Avalanche Fuji C-Chain | `0xf935193b98c53c25df88246f2a2fa78931a07d12`, deployment block `58693412` |
+| Real classic USDC `Payment` submitted with the exact request memo | Stellar settlement table above |
+| Receipt, decoded event, and `getAnchor` getter independently cross-checked | Avalanche anchor table above |
+| Server-only `API_MUTATION_SECRET` set on both the API and the web proxy | Render and Netlify environment settings |
+| Pollar Google redirect configured for the deployed web origin | Pollar dashboard |
+| Browser mutation proxy reaching the API | Current deployment |
+
+### Still required
+
+1. Verify the deployed `AnchorRegistry` source against the compiled artifact. Only a read-only
+   verification has been performed.
+2. Replace the in-memory repository with the `infra/postgres` schema so a public proof URL survives
+   a restart.
+3. Persist Horizon's transaction response or selected fields alongside the request record.
+4. Operate the public API with durable identity, access control, rate limits, observability, and
    availability controls.
-7. Configure a server-only `API_MUTATION_SECRET` and protect real evidence-changing routes; never
-   place that secret in browser code.
-8. Commission a scoped security review. No audit is claimed by this MVP.
+5. Add an authorized deployer/anchorer policy to the permissionless registry, or explicitly accept
+   the race between competing hashes.
+6. Add an operational reconciliation path for a crash after Fuji submission but before the receipt
+   is saved.
+7. Commission a scoped security review. No audit is claimed by this MVP.

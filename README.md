@@ -1,16 +1,29 @@
 # ProofDrop
 
-ProofDrop is a small, verifiable micro-payment flow for **Stellar Testnet USDC**. It creates a
-payment request, verifies one exact classic Stellar payment, hashes a canonical manifest with
-SHA-256, optionally anchors that hash on **Avalanche Fuji C-Chain**, and exposes a public proof URL.
+**One USDC micro-payment on Stellar Testnet, with a public evidence URL anyone can recompute.**
 
-The repository runs in an explicit **simulated demo mode** with no secrets. Real adapters stay
-unconfigured until their environment variables are supplied. Pollar is an optional browser payment
-rail; when it is absent, the existing manual hash flow remains available.
+ProofDrop creates a payment request, verifies one exact classic Stellar payment, hashes a canonical
+manifest with SHA-256, optionally anchors that hash on **Avalanche Fuji C-Chain**, and publishes a
+public proof URL. Stellar is the payment authority and always comes first; Avalanche is a strictly
+sequential, optional anchor. Pollar is an optional browser payment rail and is never authoritative.
 
-## Quick demo
+## Quick path
 
-Prerequisites: Node.js 24 and npm 11.
+**See it running — the live deployment:**
+
+| What | URL |
+|------|-----|
+| Web app | <https://proof-drop.netlify.app> |
+| API health | <https://proofdrop.onrender.com/health> |
+| API root | <https://proofdrop.onrender.com> |
+
+> **Hard limitation: the live API stores records in memory.** The Render service runs a
+> process-local, in-memory repository. A restart, redeploy, or cold start loses every record, so a
+> public proof URL can return `404` even though the Stellar payment and the Avalanche anchor remain
+> permanent on their networks. Nothing in this deployment is durable storage. See
+> [Deployment limits](#deployment-limits).
+
+**Run it yourself — deterministic demo, no secrets.** Requires Node.js 24 and npm 11.
 
 ```bash
 cd "C:\Users\FMAYF\OneDrive - Instituto Politecnico Nacional\Documents\proofdrop"
@@ -28,15 +41,33 @@ Open <http://localhost:3000>, then:
 The UI and API mark this path `SIMULATED`. No payment or Avalanche transaction is submitted, demo
 transaction labels are not 64-character hex hashes, and no explorer links are generated.
 
+## Demo mode vs real Testnet mode
+
+| | Demo mode | Real Testnet mode |
+|---|---|---|
+| Start with | `npm run dev:demo` | `DEMO_MODE=false` plus the variables below |
+| Labels | `SIMULATED` throughout | Real Horizon and Fuji evidence |
+| Stellar | Deterministic `SIMULATED-STELLAR-*` label, no Horizon request | Exact classic USDC `Payment` re-read from Horizon Testnet |
+| Avalanche | Deterministic simulation, no transaction | Optional `AnchorRegistry` write on Fuji, only after the Stellar step |
+| Record IDs | `demo-*`, `demo-proof-*` | `PD-XXXXXXXX` |
+| Mutation secret | Not required | Server-only `API_MUTATION_SECRET` required |
+| Records | Cleared on API restart | Cleared on API restart (in-memory) |
+
+Use demo mode for a deterministic, secret-free walkthrough. Use real mode only once the Stellar and
+Fuji variables are configured; a manifest can be built without Avalanche configuration, but the
+anchor endpoint returns `unconfigured` until both Fuji values are present.
+
 ## Repository map
 
 | Area | Purpose |
 |------|---------|
 | `apps/web` | Next.js App Router UI in neutral professional Spanish |
+| `apps/web/public/brand` | Web-served brand assets; the only images the app loads |
 | `services/api` | Fastify REST API, state machine, repository, and network adapters |
 | `packages/shared` | Domain types, validation, canonical JSON, manifest, and SHA-256 helpers |
 | `contracts/avalanche` | Cancun Solidity `AnchorRegistry`, Foundry tests, and deploy script |
 | `contracts/stellar` | Explains why no Soroban registry is required for the MVP |
+| `assets` | Supplied source brand artwork; not served at runtime |
 | `infra/postgres/schema.sql` | Production persistence schema; demo does not require PostgreSQL |
 | `docs` | Architecture, demo walkthrough, and evidence boundaries |
 
@@ -50,6 +81,27 @@ transaction labels are not 64-character hex hashes, and no explorer links are ge
 | `npm run typecheck` | Builds shared declarations, then checks API and web TypeScript |
 | `npm test` | Runs shared and API Vitest suites |
 | `npm run build` | Builds shared, compiles the API, and creates the Next.js production build |
+
+## Brand assets
+
+Source artwork lives in [`assets/`](assets/README.md) and is never served at runtime. The derived,
+web-optimized files in `apps/web/public/brand/` are the only images the app loads.
+
+| Path | Dimensions | Role |
+|------|------------|------|
+| `assets/proofdrop.jpg` | 1408x768 JPEG | Supplied logo source (landscape) |
+| `assets/proofdropcover.jpg` | 1376x768 JPEG | Supplied cover / hero artwork |
+| `apps/web/public/brand/logo-192.png` | 192x192 PNG | Header brand mark, favicon, manifest icon |
+| `apps/web/public/brand/logo-512.png` | 512x512 PNG | Web manifest icon |
+| `apps/web/public/brand/apple-touch-icon.png` | 180x180 PNG | Apple touch icon |
+| `apps/web/public/brand/cover.jpg` | 1200x670 JPEG | Landing hero brand visual |
+| `apps/web/public/brand/og-cover.jpg` | 1200x630 JPEG | Open Graph and social preview |
+
+The icon PNGs are a square center crop of the supplied logo, not a redrawn or squashed version.
+`cover.jpg` keeps the source aspect ratio exactly; `og-cover.jpg` is the same artwork center-cropped
+to the 1200x630 Open Graph ratio. Favicon, Open Graph, and web manifest references are declared in
+`apps/web/app/layout.tsx` and `apps/web/public/site.webmanifest`. No author, license, or trademark
+holder is asserted for the supplied images.
 
 ## Environment
 
@@ -144,11 +196,16 @@ CORS wildcard.
 
 ### Deployment limits
 
-Render currently runs ProofDrop against a process-local, in-memory repository. A restart, redeploy,
-or process replacement loses its records, so a public proof URL is not durable. A free Render web
-service may sleep after inactivity; on either a free or paid plan, a service can be unavailable
-during a restart or cold start. Changing to a paid plan does not make this in-memory repository
-durable. Use this path for a controlled hackathon demo, not production persistence.
+**The live API's storage is in memory, so live records are not durable.** Render currently runs
+ProofDrop against a process-local, in-memory repository. A restart, redeploy, or process replacement
+loses its records, so a public proof URL such as `/proof/PD-XXXXXXXX` can return `404` for a record
+that was real. The underlying Stellar payment and Avalanche anchor are unaffected: they stay on their
+networks and remain independently checkable from the explorer links.
+
+A free Render web service may also sleep after inactivity, and on either a free or paid plan the
+service can be unavailable during a restart or cold start. Moving to a paid plan does not make this
+in-memory repository durable. Use this path for a controlled hackathon demo, not production
+persistence. `infra/postgres/schema.sql` is the intended replacement.
 
 ## API routes
 
@@ -203,8 +260,8 @@ request is idempotent.
 - Real evidence-changing routes require a server-only mutation secret. The browser uses the
   same-origin allowlisted Next.js proxy; the API still enforces the header directly. Demo mode
   remains frictionless and visibly `SIMULATED`.
-- A public URL depends on the configured API and repository; the in-memory demo repository loses
-  records on restart.
+- A public URL depends on the configured API and repository. The in-memory repository loses records
+  on restart, so a live public proof URL is availability, not durability.
 - The Solidity registry stores a hash and Stellar transaction label. It does not call Horizon.
 - No claim is made about Mainnet, atomic settlement, a benchmark, an audit, Merkle verification,
   or ZK cryptography.
@@ -238,9 +295,10 @@ atomic. See `services/api/src/adapters/pollar.ts` for the non-authoritative serv
 
 ## More documentation
 
-- [`docs/architecture.md`](docs/architecture.md) — components, state, and data flow
-- [`docs/demo.md`](docs/demo.md) — deterministic first-run walkthrough
-- [`docs/evidence.md`](docs/evidence.md) — what each artifact proves and what it does not
+- [`docs/architecture.md`](docs/architecture.md) — components, state, production topology, and data flow
+- [`docs/demo.md`](docs/demo.md) — deterministic demo walkthrough plus the live Testnet path and troubleshooting
+- [`docs/evidence.md`](docs/evidence.md) — what each artifact proves, the captured run, and current deployment status
+- [`assets/README.md`](assets/README.md) — supplied source brand assets and their derived public versions
 - [`contracts/avalanche/README.md`](contracts/avalanche/README.md) — contract setup and deployment
 
 ## License
