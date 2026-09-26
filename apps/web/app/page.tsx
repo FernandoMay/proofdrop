@@ -77,17 +77,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
-        <div className="container hero-brand">
-          <img
-            alt="Marca ProofDrop: escudo con la inicial P y una flecha ascendente, junto al lema Modern Secure Data Attestation."
-            className="hero-brand-image"
-            decoding="async"
-            height={670}
-            src="/brand/cover.jpg"
-            width={1200}
-          />
-        </div>
       </section>
 
       <section className="section section-white" id="como-funciona">
@@ -155,6 +144,17 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      <div className="container hero-brand">
+        <img
+          alt="Marca ProofDrop: escudo con la inicial P y una flecha ascendente, junto al lema Modern Secure Data Attestation."
+          className="hero-brand-image"
+          decoding="async"
+          height={670}
+          src="/brand/cover.jpg"
+          width={1200}
+        />
+      </div>
     </>
   );
 }
